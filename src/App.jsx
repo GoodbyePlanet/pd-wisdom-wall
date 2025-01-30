@@ -9,7 +9,7 @@ import getUuid from 'uuid-by-string'
 const GOLDENRATIO = 1.61803398875
 
 export const App = ({ images }) => (
-  <Canvas dpr={[1, 1.5]} camera={{ fov: 70, position: [0, 2, 15] }}>
+  <Canvas dpr={[1, 1.5]} camera={{ fov: 35, position: [0, 2, 11] }}>
     <color attach="background" args={['#191920']} />
     <fog attach="fog" args={['#191920', 0, 15]} />
     <group position={[0, -0.5, 0]}>
@@ -38,59 +38,88 @@ function Frames({ images, q = new THREE.Quaternion(), p = new THREE.Vector3() })
   const ref = useRef()
   const clicked = useRef()
   const [, params] = useRoute('/item/:id')
-  const [, setLocation] = useLocation("/item/911ab6b7-990b-5a85-a116-c48ce246de9c")
+  const [, setLocation] = useLocation()
+  const [clickedFrame, setClickedFrame] = useState(null) // Track clicked frame
+
+  // useEffect(() => {
+  //   clicked.current = ref.current.getObjectByName(params?.id)
+  //   if (clicked.current) {
+  //     clicked.current.parent.updateWorldMatrix(true, true)
+  //     clicked.current.parent.localToWorld(p.set(0, GOLDENRATIO / 2, 1.25))
+  //     clicked.current.parent.getWorldQuaternion(q)
+  //     console.log("clicked", clicked)
+  //   } else {
+  //     p.set(0, 0, 5.5)
+  //     q.identity()
+  //   }
+  // })
+  // useFrame((state, dt) => {
+  //   easing.damp3(state.camera.position, p, 0.4, dt)
+  //   easing.dampQ(state.camera.quaternion, q, 0.4, dt)
+  // })
   useEffect(() => {
-    clicked.current = ref.current.getObjectByName(params?.id)
-    if (clicked.current) {
-      clicked.current.parent.updateWorldMatrix(true, true)
-      clicked.current.parent.localToWorld(p.set(0, GOLDENRATIO / 2, 1.25))
-      clicked.current.parent.getWorldQuaternion(q)
+    if (params?.id) {
+      setClickedFrame(params.id) // Store clicked frame's name
     } else {
-      p.set(0, 0, 5.5)
-      q.identity()
+      setClickedFrame(null)
     }
-  })
-  useFrame((state, dt) => {
-    easing.damp3(state.camera.position, p, 0.4, dt)
-    easing.dampQ(state.camera.quaternion, q, 0.4, dt)
-  })
+  }, [params])
+
   return (
     <group
       ref={ref}
-      onClick={(e) => (e.stopPropagation(), setLocation(clicked.current === e.object ? '/item/911ab6b7-990b-5a85-a116-c48ce246de9c' : '/item/' + e.object.name))}
-      onPointerMissed={() => setLocation('/item/911ab6b7-990b-5a85-a116-c48ce246de9c')}>
-      {images.map((props) => <Frame key={props.url} {...props} /> /* prettier-ignore */)}
+      // onClick={(e) => (e.stopPropagation(), setLocation(clicked.current === e.object ? '/' : '/item/' + e.object.name))}
+      onClick={(e) => {
+        e.stopPropagation()
+        const clickedName = e.object.name
+        setLocation(clickedFrame === clickedName ? '/' : `/item/${clickedName}`)
+      }}
+      onPointerMissed={() => setLocation('/')}>
+      {images.map((props) => <Frame key={props.url} clickedFrame={clickedFrame} {...props} /> /* prettier-ignore */)}
     </group>
   )
 }
 
-function Frame({ url, c = new THREE.Color(), ...props }) {
+function Frame({ url, c = new THREE.Color(), clickedFrame, position: initialPosition, ...props }) {
   // const image = useRef()
   const frame = useRef()
+  const childFrame = useRef()
   // const [, params] = useRoute('/item/:id')
   const [hovered, hover] = useState(false)
-  const [rnd] = useState(() => Math.random())
+  // const [rnd] = useState(() => Math.random())
   const name = getUuid(url)
   // const isActive = params?.id === name
   useCursor(hovered)
+
+  const isClicked = clickedFrame === name
+  const centerPosition = [0, 2, 8] // Move clicked frame to the center
+
+
+  console.log("initial position", initialPosition)
+  // Store initial position dynamically
+  const position = useRef(new THREE.Vector3(...initialPosition))
+  const targetPosition = isClicked ? centerPosition : initialPosition
+
   useFrame((state, dt) => {
-    // image.current.material.zoom = 2 + Math.sin(rnd * 10000 + state.clock.elapsedTime / 3) / 2
-    // easing.damp3(image.current.scale, [0.85 * (!isActive && hovered ? 0.85 : 1), 0.9 * (!isActive && hovered ? 0.905 : 1), 1], 0.1, dt)
-    // easing.dampC(frame.current.material.color, hovered ? 'orange' : 'white', 0.1, dt)
+    easing.damp3(position.current, targetPosition, 0.4, dt) // Smooth movement
+    frame.current.position.copy(position.current) // Apply position changes
+    easing.dampC(childFrame.current.material.color, hovered ? '#05b3fa' : 'white', 0.1, dt) // Smooth color change
   })
   return (
     <group {...props}>
       <mesh
+        ref={frame}
         name={name}
         onPointerOver={(e) => (e.stopPropagation(), hover(true))}
         onPointerOut={() => hover(false)}
         scale={[1, GOLDENRATIO, 0.05]}
-        position={[0, GOLDENRATIO / 2, 0]}>
+        // position={targetPosition}>
+        >
         <boxGeometry />
-        <meshStandardMaterial color="#151515" metalness={0.5} roughness={0.5} envMapIntensity={2} />
-        <mesh ref={frame} raycast={() => null} scale={[0.9, 0.93, 0.9]} position={[0, 0, 0.2]}>
+        <meshStandardMaterial color="#024863" metalness={0.5} roughness={0.5} envMapIntensity={2} />
+        <mesh ref={childFrame} raycast={() => null} scale={[0.9, 0.93, 0.9]} position={[0, 0, 0.2]}>
           <boxGeometry />
-          <meshBasicMaterial toneMapped={false} fog={false} />
+          <meshBasicMaterial color="#b7dceb" toneMapped={false} fog={false} />
         </mesh>
         {/* <Image raycast={() => null} ref={image} position={[0, 0, 0.7]} url={url} /> */}
       </mesh>
