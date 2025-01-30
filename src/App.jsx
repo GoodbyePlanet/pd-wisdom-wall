@@ -1,41 +1,55 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment, MeshReflectorMaterial, useCursor } from '@react-three/drei';
+import { Environment, MeshReflectorMaterial, Text, useCursor } from '@react-three/drei';
 import * as THREE from 'three';
 import { useLocation, useRoute } from 'wouter';
 import { easing } from 'maath';
 import getUuid from 'uuid-by-string';
+import { Bloom, EffectComposer } from '@react-three/postprocessing';
 
 const GOLDEN_RATIO = 1.61803398875;
+const blueBloomColor = new THREE.Color('#05b5fa');
+blueBloomColor.multiplyScalar(15);
+
+const FONT = 'fonts/roboto-webfont.ttf';
 
 export const App = ({ images }) => (
-  <Canvas dpr={[1, 1.5]} camera={{ fov: 35, position: [0, 2, 11] }}>
-    <color attach='background' args={['#191920']} />
-    <fog attach='fog' args={['#191920', 0, 15]} />
-    <group position={[0, -0.5, 0]}>
-      <Frames images={images} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[50, 50]} />
-        <MeshReflectorMaterial
-          blur={[300, 100]}
-          resolution={2048}
-          mixBlur={1}
-          mixStrength={80}
-          roughness={1}
-          depthScale={1.2}
-          minDepthThreshold={0.4}
-          maxDepthThreshold={1.4}
-          color='#050505'
-          metalness={0.5}
-          mirror={1}
-        />
-      </mesh>
-    </group>
-    <Environment preset='city' />
-  </Canvas>
+  <Suspense fallback={null}>
+    <Canvas dpr={[1, 1.5]} camera={{ fov: 35, position: [0, 2, 11] }}>
+      <color attach='background' args={['#191920']} />
+      <fog attach='fog' args={['#191920', 0, 15]} />
+      <group position={[0, -0.5, 0]}>
+        <Text font={FONT} position={[0, 2.5, 0]} rotation-y={0} fontSize={0.5} letterSpacing={-0.05} textAlign='center'>
+          PD WISDOM WALL
+          <meshBasicMaterial color={blueBloomColor} toneMapped={false} />
+        </Text>
+        <Frames images={images} />
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[50, 50]} />
+          <MeshReflectorMaterial
+            blur={[300, 100]}
+            resolution={2048}
+            mixBlur={1}
+            mixStrength={80}
+            roughness={1}
+            depthScale={1.2}
+            minDepthThreshold={0.4}
+            maxDepthThreshold={1.4}
+            color='#050505'
+            metalness={0.5}
+            mirror={1}
+          />
+        </mesh>
+      </group>
+      <Environment preset='city' />
+      <EffectComposer>
+        <Bloom mipmapBlur intensity={1.2} />
+      </EffectComposer>
+    </Canvas>
+  </Suspense>
 );
 
-function Frames({ images, q = new THREE.Quaternion(), p = new THREE.Vector3() }) {
+function Frames({ images }) {
   const ref = useRef();
   const [, params] = useRoute('/item/:id');
   const [, setLocation] = useLocation();
@@ -59,17 +73,17 @@ function Frames({ images, q = new THREE.Quaternion(), p = new THREE.Vector3() })
       }}
       onPointerMissed={() => setLocation('/')}>
       {images.map((props) => (
-        <Frame key={props.url} selectedWisdom={selectedWisdom} {...props} />
+        <Frame key={props.id} selectedWisdom={selectedWisdom} {...props} />
       ))}
     </group>
   );
 }
 
-function Frame({ url, c = new THREE.Color(), selectedWisdom, position: initialPosition, ...props }) {
+function Frame({ id, selectedWisdom, position: initialPosition, ...props }) {
   const frame = useRef();
   const childFrame = useRef();
   const [hovered, hover] = useState(false);
-  const name = getUuid(url);
+  const name = getUuid(id);
   useCursor(hovered);
 
   const isClicked = selectedWisdom === name;
@@ -92,7 +106,7 @@ function Frame({ url, c = new THREE.Color(), selectedWisdom, position: initialPo
         onPointerOut={() => hover(false)}
         scale={[1, GOLDEN_RATIO, 0.05]}>
         <boxGeometry />
-        <meshStandardMaterial color='#024863' metalness={0.5} roughness={0.5} envMapIntensity={2} />
+        <meshStandardMaterial color='#fcfeff' metalness={0.5} roughness={0.5} envMapIntensity={2} />
         <mesh ref={childFrame} raycast={() => null} scale={[0.9, 0.93, 0.9]} position={[0, 0, 0.2]}>
           <boxGeometry />
           <meshBasicMaterial color='#b7dceb' toneMapped={false} fog={false} />
