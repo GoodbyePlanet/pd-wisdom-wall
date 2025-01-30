@@ -9,7 +9,7 @@ import { Bloom, EffectComposer } from '@react-three/postprocessing';
 
 const GOLDEN_RATIO = 1.61803398875;
 const blueBloomColor = new THREE.Color('#05b5fa');
-blueBloomColor.multiplyScalar(15);
+blueBloomColor.multiplyScalar(20);
 
 const FONT = 'fonts/roboto-webfont.ttf';
 
@@ -109,12 +109,22 @@ function Frame({ id, selectedWisdom, position: initialPosition, ...props }) {
         <meshStandardMaterial color='#fcfeff' metalness={0.5} roughness={0.5} envMapIntensity={2} />
         <mesh ref={childFrame} raycast={() => null} scale={[0.9, 0.93, 0.9]} position={[0, 0, 0.2]}>
           <boxGeometry />
-          <meshBasicMaterial color='#b7dceb' toneMapped={false} fog={false} />
+          <meshBasicMaterial color='#ebf2ef' toneMapped={false} fog={false} />
         </mesh>
+        <Text
+          font={FONT}
+          position={[0, 0, 0.8]} // Adjust position to be inside the frame
+          fontSize={0.08} // Adjust text size as needed
+          color='#0a0a0a' // Text color
+          anchorX='center' // Center the text horizontally
+          anchorY='middle' // Center the text vertically
+        >
+          {props.wisdom ? props.wisdom : ''}
+        </Text>
+        <Text font={FONT} position={[0.2, -0.1, 0.8]} fontSize={0.05} color='#0a0a0a' anchorX='center' anchorY='middle'>
+          {props.sage ? props.sage : ''}
+        </Text>
       </mesh>
-      {/* <Text maxWidth={0.1} anchorX="left" anchorY="top" position={[0.55, GOLDEN_RATIO, 0]} fontSize={0.025}>
-        {name.split('-').join(' ')}
-      </Text> */}
     </group>
   );
 }
